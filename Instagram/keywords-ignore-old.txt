@@ -1,0 +1,13 @@
+@#single_characters
+1,2,3,4,5,6,7,8,9,0
+a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z
+A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z
+@#end_singles
+een, de, dat, het, die, deze, van, met
+doei
+jij, ons, er, is, ik, zijn, in, we, op
+hij, zij, hun, hen
+gaan, ga, kijk, kijken, naar, en, of, soms
+for, the, la, un, une, you, ti, elle, di, des
+les, le, de, lei, nei, sono, my, me, ma, Ia, mia, su
+day, re, day, esame, looking
