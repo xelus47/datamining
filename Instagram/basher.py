@@ -3,30 +3,30 @@
 #E:\ggearoce\client side data mining\instagram people by location\hack\saved
 from instaclass import Instaclass
 from time import strftime, gmtime
-import urllib,json,argparse,os
+import urllib,json,argparse,os, sys
+
+
+from retrieve import *
+
 
 if __name__ == '__main__':
-	parser = argparse.ArgumentParser(description='InstaPwn/Bash an instagram user')
-	parser.add_argument('destination', help='/username/ or /explore/tags/tag/ or /p/id or (...)')
-	parser.add_argument('-t','--test',help='test the destination and connection',action='count')
-	parser.add_argument('--cache',help='disables nocache mode (lighter load)',action='count')
-	parser.add_argument('--download',help='if enabled, will download images it encounters',action='count')
-	parser.add_argument('--complete',help='will keep looping until not "has_next_page"',action='count')
-	#parser.add_argument('-o','--output',help='Name the output file (defaults to <filename>.com)')
+	parser = argparse.ArgumentParser(description='Instagram miner')
+	parser.add_argument('destination', help='/{username}/ or /explore/tags/{tag}/ or /p/{id} or /explore/location/{location id}',type=str,default='/nederland/')
+	parser.add_argument('--debug',help='Show a lot more stuff in terminal',type=int, default=0)
+	parser.add_argument('-d','--depth',help='The "depth" of mining (default=0)',type=int, default=0)
+	parser.add_argument('-w','--width',help='Will fully mine up until this depth level (default=0)',type=int, default=0)
+	parser.add_argument('-dw','--depthwidth',help='Depth and width in one arg (default=0,0)',type=str, default="0,0")
+	parser.add_argument('-n','--nodes',help='Number of nodes to save if this level is mined (default=-1 (all))',type=int, default=-1)
 	args = parser.parse_args()
 
-	insta=Instaclass()
-	#insta.nocache=bool(args.nocache)
-	insta.imagedl=bool(args.download)
-	insta.complete=bool(args.complete)
-	if not insta.complete:
-		insta.nocache=not bool(args.cache)
-	destination=args.destination
-	if destination=='@d':
-		destination='/guusvogel/'
+	pageDat = downloadPage(args.destination) # returns unprocessed JSON object
 
-	if bool(args.test):
-		result = insta.test(destination)
-		print result['http'],result['hacked']
-	else:
-		insta.bash(destination)
+	pageJSON = parsePage(pageDat) # convert raw JSON into properly formatted JSON with useful info
+
+	print pageJSON.type # print what type of page it is (user, hashtag, location, post)
+	print pageJSON.summary()
+
+
+
+	sys.exit()
+
