@@ -2,11 +2,26 @@
 
 https://www.osiris.universiteitutrecht.nl/osistu_ospr/OnderwijsCatalogusZoekCursus.do
 
-Het script (osiris.py) kan al auth opvragen (requestToken en de juiste cookies), maar bij
-het opvragen van zoekresultaten met een POST request met PRECIES DEZELFDE (naast de auth)
-HEADERS EN PARAMS KRIJGT HIJ NIET DEZELFDE PAGINA ALS IN DE BROWSER (met developer console)
+De basis van de mijn is bijna af. Vergelijk de volgende twee javascript snippets (Firefox console):
+```javascript
+>> // eerste poging
+>> a0=document['form0']
+← '<form id="form0" name="form0" (...)>'
+>> a0['event'].value='zoeken'
+← 'zoeken'
+>> a0.submit()
+```
 
-Het heeft heel misschien te maken met javascrub. In ieder geval is het zo dat de data waar
-we naar zoeken (alle cursussen in `<section class='tweedekolom'>`) zitten in de response body
-als we de browser gebruiken maar de tweede kolom is vooralsnog leeg als het via osiris.py gaat :(
+```javascript
+>> // tweede poging
+>> a0=document['form0']
+← '<form id="form0" name="form0" (...)>'
+>> a0['event'].value='zoeken'
+← 'zoeken'
+>> _validateForm(a0)
+← true
+>> a0.submit()
+```
 
+De eerste poging levert een lege 'tweedekolom' op, maar de tweede poging levert de lijst van cursussen op zoals we willen.
+Dus het geheim zit nu nog in `_validateForm(form)`.

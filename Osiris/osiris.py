@@ -2,10 +2,10 @@
 
 import httplib, json, urllib, re
 
-
-def sendRequest(method='GET',params="", path="/osistu_ospr/OnderwijsCatalogusZoekCursus.do",  HTTPS=True, cookie=""):
+def sendRequest(method='GET',params="", path="/osistu_ospr/OnderwijsCatalogusZoekCursus.do",  HTTPS=True, cookie="",conn=None):
 	user_agent='Mozilla/5.0 (Windows NT 6.1) Gecko/20100101 Firefox/47.0'
-	conn = httplib.HTTPSConnection("www.osiris.universiteitutrecht.nl")
+	if conn is None:
+		conn = httplib.HTTPSConnection("www.osiris.universiteitutrecht.nl")
 	path = "/osistu_ospr/OnderwijsCatalogusZoekCursus.do"
 
 	conn.putrequest(method,path,params)
@@ -21,8 +21,8 @@ def sendRequest(method='GET',params="", path="/osistu_ospr/OnderwijsCatalogusZoe
 
 	return resp
 
-def getAuth():
-	r = sendRequest()
+def getAuth(conn = None):
+	r = sendRequest(conn = conn)
 	cookie = r.getheader('set-cookie')
 	if r.status!=200:
 		r.close()
@@ -44,6 +44,12 @@ def getAuth():
 
 
 
+def mineSucces(rawPageData):
+	""" str -> bool """
+	return 0 < rawPageData.find('Klik op de cursus om de cursusinformatie te tonen.')
+
+
+
 
 
 if __name__=='__main__':
@@ -61,7 +67,10 @@ if __name__=='__main__':
 		'requestToken':'iamrequesttokenyes?',
 		'jaar_1':'2016',
 		'zoek':'',
+		'zoek_uitgebreid':'J',
 		'toon':'',
+		'toon':'Cursus',
+		'toon':'Toetsen',
 		'aanvangs_blok':'',
 		'timeslot':'geenVoorkeur',
 		'categorie':'geenVoorkeur',
@@ -72,7 +81,7 @@ if __name__=='__main__':
 		'bijvakker':'geenVoorkeur',
 		'voertaal':'geenVoorkeur',
 		'event':'zoeken',
-		'source':'timeslot',
+		'source':'',
 		'cursuscode':'',
 		'korteNaamCursus':'',
 		'collegejaar':'',
@@ -85,23 +94,39 @@ if __name__=='__main__':
 	# event=goto&source=OnderwijsZoekCursus&value=0&size=200
 
 
-	token,cookies = getAuth()
+	connection  = httplib.HTTPSConnection("www.osiris.universiteitutrecht.nl")
+
+
+	token,cookies = getAuth(conn = connection)
 	print 'requestToken:', token
-	print 'cookie:', cookies
+	#print 'cookie:', cookies
 
 	requestParams['requestToken']=token
-	print urllib.urlencode(requestParams)
+	#print urllib.urlencode(requestParams)
 
-	resp = sendRequest('POST',params=urllib.urlencode(requestParams),cookie=cookies)
-	#resp=sendRequest('POST',requestParams, cookie=cookies)
-	data = resp.read()
+	minedSuccesfully=False
 
-	print resp.status,resp.reason
-	#print resp.getheaders()
-	print 'transfered:',str(len(data)),"bytes"
+	i=0
+	while i<5 and not minedSuccesfully:
+		print ""
+		print "Attempt:",i+1
 
-	resp.close()
+		resp = sendRequest('POST',params=urllib.urlencode(requestParams),cookie=cookies, conn = connection)
+		data = resp.read()
 
-	f1 = open('tmp2','w')
-	f1.write(data)
-	f1.close()
+		if resp.status!=200:
+			print resp.status,resp.reason
+			print resp.getheaders()
+		else:
+			print 'received',str(len(data)),"bytes"
+
+		resp.close()
+
+		minedSuccesfully=mineSucces(data)
+		i+=1
+		print "Succes:",minedSuccesfully
+
+
+	#f1 = open('tmp2','w')
+	#f1.write(data)
+	#f1.close()
