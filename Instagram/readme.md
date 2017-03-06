@@ -1,5 +1,10 @@
 # Instagram data miner
 
+### Todo
+- maak gebruik van POST instagram.com/query/ om directer te zoeken
+in plaats van directe pagina's met GET
+
+
 Het project bestaat grofweg uit de volgende onderdelen:
 
 **Data ophalen**

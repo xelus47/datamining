@@ -1,148 +1,183 @@
+#!/usr/bin/env python2
 
-"""
-Content			Used abbr		link
-profile page	@, /, /u/		/%s
-tag search page #, /t/			/explore/tags/%s
-place page		/l/				/explore/locations/%id/[%name]
-post			/p/				/p/%id
+from time import strftime, gmtime
+import urllib,json,argparse,os,sys,cmd,signal,time
+
+from retriever import Retriever
+
+try:
+	import colorama
+	from colorama import Fore, Back, Style
+except ImportError:
+	print "Please install colorama for python before continuing."
+	print "Official link: https://pypi.python.org/pypi/colorama"
+	sys.exit(0)
+
+colorama.init(autoreset=True)
+
+class Console(cmd.Cmd,object):
+	v="0.0.1"
+	""" SCREEN BUFFER """
+
+	def _buffer_start(self):
+		print "\033[?1049h\033[H"
+	def _buffer_quit(self):
+		print "\033[?1049l"
 
 
-"""
+	""" INITIALISATION """
 
-class InstaMiner(object):
-	def __str__(self):
-		return "??"
+	intro='hOI'
+	#outro="\033[1A\033[8GBye ;)\033[1A"
+	outro="\033[2A\033[2K\033[1A"
 
-	v='0.0.0'
-	stype='q'
-	location=''
-	search_page_type=''
-	timeout=6
+	def start(self):
 
-	instagram_pages={
-		'ProfilePage':{'url':'/','entry_data':'ProfilePage','query':[r'@','/',r'u']},
-		'LocationsPage':{'url':'/explore/locations/','entry_data':'LocationsPage','query':[r'l']},
-		'TagPage':{'url':'/explore/tags/','entry_data':'TagPage','query':[r'#',r't']},
-		'PostPage':{'url':'/p/','entry_data':'PostPage','query':[r'p']},
-	}
+		### IMPORTS
 
-	def __init__(self):
-		self.re=__import__('re')
+		self.retriever = Retriever()
 		self.time=__import__('time')
 		self.json=__import__('json')
-		self.httplib=__import__('httplib')
-
-		## Generate regex string
-
-		ls_alias = []
-		ls_indicator = []
-		for typ in self.instagram_pages:
-			for q in self.instagram_pages[typ]['query']:
-				re = ur"^(?P<word>\w*)$"
-				m = self.re.search(re,q)
-				if m: # if it's any letter(s)
-					ls_alias.append(m.group('word'))
-				else:
-					ls_indicator.append(q)
+		self.re=__import__('re')
 
 
-		self.regex = ur"^\/?((?P<alias>"+"|".join(ls_alias)+ur")\/|(?P<indicator>"+"|".join(ls_indicator)+"))(?P<query>[a-zA-Z0-9]+)$"
+		### INTRO ART
 
+		rows, columns = os.popen('stty size', 'r').read().split()
 
-	def parse_location_replace(self,matchobj):
-
-		#print matchobj.groupdict(), matchobj.group(0)
-		ind = matchobj.group('alias') or matchobj.group('indicator')
-		#print "ind",ind
-
-		for typ in self.instagram_pages:
-			if ind in self.instagram_pages[typ]['query']:
-
-				## Lookup and maybe parse known places 
-				if typ=='LocationsPage':
-					f2=open('assets/places.json','r')
-					known_places = self.json.loads(f2.read())
-					f2.close()
-					if matchobj.group('query') in known_places:
-						return self.instagram_pages[typ]['url']+known_places[matchobj.group('query')]+"/"
-
-
-				return self.instagram_pages[typ]['url']+matchobj.group('query')+"/"
-		return matchobj.group(0)
-
-	def parse_location(self,loc):
-		#regex = ur"^\/?((?P<alias>p|t|u|l)\/|(?P<indicator>\/|@|#))(?P<query>[a-zA-Z0-9]+)$"
-		regex = self.regex
-		return self.re.sub(regex,self.parse_location_replace,loc)
-
-	def mine(self, location=None, args=None):
-		if location==None:
-			location=self.location
-
-		if args==None:
-			args=self.stype
-
-		print "Loading..."
-		parsed_location=self.parse_location(location)
-		print 'parsed:', parsed_location
-		
-		## HTTPS
-
-		path = parsed_location
-		user_agent='Mozilla/5.0 (Windows NT 6.1) Gecko/20100101 Firefox/47.0' # firefox 47 on win7
-		conn = self.httplib.HTTPSConnection('www.instagram.com')
-		conn.putrequest('GET',path)
-		conn.putheader('user-agent',user_agent)
-		conn.putheader('accept','text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8')
-		conn.putheader('accept-language','en-GB,nl;q=0.8,ja;q=0.5,en;q=0.3')
-		conn.putheader('referer','https://www.instagram.com/')
-		conn.putheader('connection','keep-alive')
-		conn.putheader('upgrade-insecure-requests','1')
-		conn.endheaders()
-
-		resp = conn.getresponse()
-		try:
-			assert resp.status==200, "Connection failure"
-		except AssertionError:
-			print path, resp.status, resp.reason
-			s=str(resp.getheaders())
-			data = resp.read()
-			f=open('error','w')
-			f.write(s+'\n\n\n'+data)
-			f.close()
-			return {"status":"error"}
-		data = resp.read()
-
-		# -----
-		match = 'window._sharedData = '
-		print data.count(match), len(data)
-
-		try:
-			assert data.count(match)==1, "Unknown data format"
-		except AssertionError:
-			print path, "unknown data format _sharedData (after download)"
-			s=str(resp.getheaders())
-			f=open('error','w')
-			f.write(s+'\n\n\n'+data)
-			f.close()
-			return {"status":"error"}
-		s1=data[data.find(match):]
-		s2=s1[len(match):s1.find('</script>')-1]
-
-		sharedData=self.json.loads(s2)#.decode('unicode-escape'))
-		entry_data=sharedData['entry_data']
-
-		f=open('tmp', 'w')
-		f.write(self.json.dumps(entry_data,indent=2))
+		asci = ""
+		f = open('assets/logo.txt','r')
+		logoArt = f.read()
 		f.close()
+		for line in logoArt.split('\n'):
+			#asci=asci+'\n'+' '*(int(0.5*int(columns) )-int(0.5*len(line)))+line
+			asci=asci+'\n'+Fore.YELLOW+' '*24+line
+		asci+='\n'
+		asci+='\n'+' '*(int(0.5*int(columns) )-int(0.5*len('InstaMiner')))+'InstaMiner'
+		asci+='\n'+' '*(int(0.5*int(columns) )-int(0.5*len('v'+self.v)))+'v'+self.v
+		asci+='\n\n'+' '*(int(0.5*int(columns) )-int(0.5*len('Type "help" for help')))+'Type "help" for help'
 
-		print "Saved!"
+		self.intro=asci
 
-	def match_location(self,test):
-		regex = self.regex
-		#regex = ur"^\/?((?P<alias>p|t|u|l)\/|(?P<indicator>\/|@|#))(?P<query>[a-zA-Z0-9]+)$"
-		match=self.re.search(regex,test)
-		if match:
-			return True
+		### INIT
+
+		self._buffer_start()
+		self.cmdloop()
+
+	""" CMD HOOKS """
+
+	def emptyline(self):
+		pass
+
+	def precmd(self, line):
+		ls = line.split(';')
+		self.cmdqueue+=ls[1:]
+		line=ls[0]
+
+		while line.startswith(' '):
+			line=line[1:]
+
+		alias_parsed = self.parse_alias(line)
+		return alias_parsed
+
+	def postcmd(self,stop,line):
+		## Method for printing to the terminal or piping to the next function
+		# TODO
+		return stop
+
+	""" COMMANDS """
+
+	def do_echo(self,arg):
+		print arg
+		return 0
+
+	def do_clear(self,arg):
+		print "\033[2J"
+
+	def do_regex(self,arg):
+		print self.retriever.regex
+
+	def do_exit(self):
+		sys.exit()
+
+	def do_mine(self, arg):
+		if arg=='':
+			try:
+				assert self.retriever.location!='','location not set'
+			except AssertionError:
+				print "Error: missing argument <location>"
+				return 0
+		args=arg.split(' ')
+		try:
+			assert len(args)<=2
+		except AssertionError:
+			print "Error: too many arguments"
+			return 0
+		for argi in args:
+			if self.retriever.match_location(argi): # if it is in the format of /letter/word
+				self.retriever.location=argi
+			elif "/" in argi or '@' in argi or '#' in argi:
+				print "Error: incorrect location format"
+				return 0
+			else:
+				self.retriever.stype=argi
+
+		## From here on out we assume all inputs to have been properly processed and deemed correct
+
+		try:
+			result = self.retriever.mine()
+
+			for x in result: # loops once lol
+				y=x
+
+
+
+		except KeyboardInterrupt:
+			print "Mining operation canceled"
+
+		print "Job stopped"
+
+
+	""" ALIASES """
+
+	aliases = {'e':'echo','m':'mine','q':'exit'}
+
+	def alias_replace(self,matchobj):
+		if matchobj.group('alias') is not None:
+			try:
+				return self.aliases[matchobj.group('alias')]+" "+matchobj.group('arg')
+			except IndexError:
+				return matchobj.group(0)
 		else:
-			return False
+			return matchobj.group(0)
+
+	def parse_alias(self,line):
+		ls = []
+		for a in self.aliases:
+			ls.append(a)
+
+		aa = "|".join(ls)
+		regex = ur"^(?P<alias>"+aa+ur")(\s(?P<arg>.*))?$" #starts and ends with alias, or starts with alias followed by space then arg
+		match = self.re.search(regex,line)
+		if match:
+			line = self.re.sub(regex, self.alias_replace, line)
+		else:
+			pass
+
+		return line
+
+
+
+if __name__=='__main__':
+	console=Console()
+	try:
+		console.start()
+	except KeyboardInterrupt, SystemExit:
+		pass
+	finally:
+		console._buffer_quit()
+		print console.outro
+		#time.sleep(1)
+		sys.exit(0)
+
+
