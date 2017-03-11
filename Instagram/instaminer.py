@@ -16,7 +16,7 @@ except ImportError:
 colorama.init(autoreset=True)
 
 class Console(cmd.Cmd,object):
-	v="0.0.1"
+	v="0.0.2"
 	""" SCREEN BUFFER """
 
 	def _buffer_start(self):
