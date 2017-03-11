@@ -29,7 +29,7 @@ class Console(cmd.Cmd,object):
 
 	intro='hOI'
 	#outro="\033[1A\033[8GBye ;)\033[1A"
-	outro="\033[2A\033[2K\033[1A"
+	outro="\033[1A\033[2K\033[1A"
 
 	def start(self):
 
@@ -129,6 +129,8 @@ class Console(cmd.Cmd,object):
 
 			for x in result: # loops once lol
 				y=x
+
+			print y
 
 
 
